@@ -39,7 +39,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // Desactivamos CSRF porque usaremos tokens JWT
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/error").permitAll() // Puerta abierta solo para el login
+                .requestMatchers("/api/auth/**", "/error", "/error", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll() // Puerta abierta solo para el login
                 .anyRequest().authenticated() // AHORA SÍ: Candado a todas las demás rutas
             );
 
