@@ -21,9 +21,17 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
-    
     @Autowired
     private UserDetailsService userDetailsService;
+
+    // --- AQUÍ ESTÁ LA MAGIA ---
+    // Le decimos al filtro que NO se ejecute si la ruta empieza con /api/auth/
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/auth/");
+    }
+    // --------------------------
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -35,22 +43,19 @@ public class JwtFilter extends OncePerRequestFilter {
         String username = null;
         String jwt = null;
 
-        // 2. Verificamos que traiga el prefijo "Bearer " (Estándar de la industria)
+        // 2. Verificamos que traiga el prefijo "Bearer "
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             username = jwtUtil.extractUsername(jwt);
         }
 
-        // 3. Si encontramos un usuario y no está autenticado todavía en este request...
+        // 3. Si encontramos un usuario y no está autenticado todavía...
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             
-            // Buscamos sus datos en la base de datos
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            // Validamos que el token sea legítimo y no haya expirado
             if (jwtUtil.validateToken(jwt, userDetails)) {
                 
-                // Si todo está bien, le damos luz verde en el contexto de seguridad de Spring
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 
@@ -59,7 +64,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
         
-        // 4. Dejamos que la petición siga su camino hacia el Controlador
+        // 4. Dejamos que la petición siga su camino
         filterChain.doFilter(request, response);
     }
 }
