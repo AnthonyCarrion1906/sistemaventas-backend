@@ -26,6 +26,12 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private com.empresa.sistemaventas.repository.UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     
 
     @PostMapping("/login")
@@ -47,6 +53,21 @@ public class AuthController {
 
         // 4. Respondemos con el JSON que espera React
         return ResponseEntity.ok(new JwtResponseDTO(jwt, userDetails.getUsername()));
+    }
+    @PostMapping("/register-admin")
+    public ResponseEntity<?> registerAdmin() {
+        // Solo para emergencias: crea el admin
+        com.empresa.sistemaventas.model.Usuario admin = new com.empresa.sistemaventas.model.Usuario();
+        admin.setUsername("admin");
+        admin.setPasswordHash(passwordEncoder.encode("123456")); 
+        admin.setNombreCompleto("Administrador");
+        admin.setEstado(1);
+        
+        // Si tu entidad Usuario necesita un Rol, asegúrate de asignárselo aquí
+        // ej: admin.setRol(rolRepository.findById(1).orElse(null));
+
+        usuarioRepository.save(admin);
+        return ResponseEntity.ok("Admin creado correctamente");
     }
     
 }
