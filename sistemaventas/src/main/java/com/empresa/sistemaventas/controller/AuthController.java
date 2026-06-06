@@ -27,10 +27,10 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private com.empresa.sistemaventas.repository.UsuarioRepository usuarioRepository;
+    private UsuarioRepository usuarioRepository;
 
     @Autowired
-    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     
 
@@ -56,16 +56,13 @@ public class AuthController {
     }
     @PostMapping("/register-admin")
     public ResponseEntity<?> registerAdmin() {
-        // Solo para emergencias: crea el admin
-        com.empresa.sistemaventas.model.Usuario admin = new com.empresa.sistemaventas.model.Usuario();
+        Usuario admin = new Usuario();
         admin.setUsername("admin");
-        admin.setPasswordHash(passwordEncoder.encode("123456")); 
+        admin.setContrasena(passwordEncoder.encode("123456")); // Usa el campo 'contrasena'
         admin.setNombreCompleto("Administrador");
-        admin.setEstado(1);
+        admin.setEstado(true); // Tu entidad usa Boolean, no Integer
+        admin.setRolId(1);    // Asumimos que el 1 es el ID del rol ADMIN
         
-        // Si tu entidad Usuario necesita un Rol, asegúrate de asignárselo aquí
-        // ej: admin.setRol(rolRepository.findById(1).orElse(null));
-
         usuarioRepository.save(admin);
         return ResponseEntity.ok("Admin creado correctamente");
     }
