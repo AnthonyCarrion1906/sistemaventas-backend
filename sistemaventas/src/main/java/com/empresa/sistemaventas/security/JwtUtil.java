@@ -2,35 +2,35 @@ package com.empresa.sistemaventas.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 @Component
 public class JwtUtil {
 
-    // 🛑 ATENCIÓN: Esta clave es el secreto de tu negocio. 
-    // Para HS256 debe tener obligatoriamente 32 caracteres o más.
-    private static final String SECRET_KEY = "EstaEsUnaClaveSecretaMuySeguraParaElSistemaDeVentas123!";
+    /**
+     * Secret compartido con core-user-management-service.
+     * Debe estar en Base64 y coincidir exactamente con el valor de JWT_SECRET
+     * usado por el servicio de autenticación.
+     */
+    @Value("${hd-selva.app.jwtSecret}")
+    private String jwtSecret;
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String username) {
-        return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                // El token expira en 10 horas (1000 ms * 60 seg * 60 min * 10 hrs)
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
+    // -----------------------------------------------------------------------
+    // Extracción de claims
+    // -----------------------------------------------------------------------
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -38,6 +38,23 @@ public class JwtUtil {
 
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
+    }
+
+    public Long extractUserId(String token) {
+        Object userId = extractAllClaims(token).get("userId");
+        if (userId instanceof Number number) {
+            return number.longValue();
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Object roles = extractAllClaims(token).get("roles");
+        if (roles instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -53,12 +70,27 @@ public class JwtUtil {
                 .getBody();
     }
 
-    private Boolean isTokenExpired(String token) {
+    // -----------------------------------------------------------------------
+    // Validación
+    // -----------------------------------------------------------------------
+
+    private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    /**
+     * Valida que el token tenga firma correcta (mismo secret y algoritmo HS512)
+     * y que no haya expirado. No requiere consulta a base de datos.
+     */
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
