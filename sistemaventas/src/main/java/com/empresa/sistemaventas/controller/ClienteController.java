@@ -46,4 +46,14 @@ public class ClienteController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarCliente(@PathVariable Integer id) {
+        try {
+            clienteService.eliminar(id);
+            return new ResponseEntity<>("Cliente eliminado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 }

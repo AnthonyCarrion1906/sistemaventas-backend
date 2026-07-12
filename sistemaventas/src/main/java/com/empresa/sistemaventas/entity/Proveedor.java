@@ -36,5 +36,7 @@ public class Proveedor {
     @Column(name = "categorias_suministro")
     private String categoriasSuministro;
 
-    // Eliminado: El campo "activo" porque no existe en MariaDB
+    // Nuevo campo agregado para habilitar el borrado lógico (Soft Delete)
+    @Column(name = "estado", columnDefinition = "boolean default true")
+    private Boolean estado;
 }

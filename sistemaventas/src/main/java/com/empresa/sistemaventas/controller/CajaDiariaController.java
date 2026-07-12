@@ -23,7 +23,7 @@ public class CajaDiariaController {
     @PostMapping("/abrir")
     public ResponseEntity<?> abrirCaja(@RequestBody Map<String, String> payload) {
         try {
-            LocalDate fecha = LocalDate.parse(payload.get("fecha"));
+            LocalDate fecha =LocalDate.parse(payload.get("fecha"));
             BigDecimal montoInicial = new BigDecimal(payload.get("montoInicial"));
             return new ResponseEntity<>(cajaDiariaService.abrirCaja(fecha, montoInicial), HttpStatus.CREATED);
         } catch (RuntimeException e) {

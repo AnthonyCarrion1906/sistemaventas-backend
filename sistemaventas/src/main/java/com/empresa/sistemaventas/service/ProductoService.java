@@ -15,21 +15,33 @@ public class ProductoService {
     private ProductoRepository productoRepository;
 
     public List<Producto> obtenerTodos() {
-        return productoRepository.findAll();
+        // Filtramos la lista completa para devolver únicamente los productos activos
+        return productoRepository.findAll().stream()
+                .filter(producto -> Boolean.TRUE.equals(producto.getEstado()))
+                .toList();
     }
 
     public Optional<Producto> obtenerPorId(Integer id) {
+        // Mantenemos la búsqueda por ID intacta. Si consultas un comprobante antiguo, 
+        // necesitas que el producto aparezca aunque haya sido desactivado recientemente.
         return productoRepository.findById(id);
     }
 
     public List<Producto> buscar(String termino) {
         if (termino == null || termino.isBlank()) {
-            return productoRepository.findAll();
+            return obtenerTodos(); // Reutilizamos la validación de activos
         }
-        return productoRepository.findByNombreContainingIgnoreCase(termino);
+        // Filtramos los resultados de la búsqueda para ocultar los desactivados
+        return productoRepository.findByNombreContainingIgnoreCase(termino).stream()
+                .filter(producto -> Boolean.TRUE.equals(producto.getEstado()))
+                .toList();
     }
 
     public Producto guardar(Producto producto) {
+        // Garantizamos que todo producto nuevo nazca activo por defecto
+        if (producto.getEstado() == null) {
+            producto.setEstado(true);
+        }
         return productoRepository.save(producto);
     }
 
@@ -51,8 +63,18 @@ public class ProductoService {
         return productoRepository.save(existente);
     }
 
+    // NUEVO MÉTODO: Desactivación Lógica (Soft Delete)
+    public void desactivar(Integer id) {
+        Producto existente = productoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                
+        existente.setEstado(false); // Cambia el estado a inactivo
+        productoRepository.save(existente);
+    }
+
     public List<Producto> obtenerProductosParaReponer() {
         return productoRepository.findAll().stream()
+                .filter(producto -> Boolean.TRUE.equals(producto.getEstado())) // No reponer productos descontinuados
                 .filter(producto -> producto.getStockActual() != null && producto.getStockMinimo() != null)
                 .filter(producto -> producto.getStockActual().compareTo(producto.getStockMinimo()) <= 0)
                 .toList();

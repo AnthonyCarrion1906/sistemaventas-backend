@@ -46,8 +46,13 @@ public class ClienteService {
         existente.setTelefono(datos.getTelefono());
         existente.setCorreo(datos.getCorreo());
         
-        // Eliminados setDireccion y setActivo
-        
         return clienteRepository.save(existente);
+    }
+
+    public void eliminar(Integer id) {
+        if (!clienteRepository.existsById(id)) {
+            throw new RuntimeException("Cliente no encontrado");
+        }
+        clienteRepository.deleteById(id);
     }
 }

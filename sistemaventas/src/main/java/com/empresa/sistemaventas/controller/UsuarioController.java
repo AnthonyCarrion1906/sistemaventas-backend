@@ -42,4 +42,14 @@ public class UsuarioController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> desactivarUsuario(@PathVariable Integer id) {
+        try {
+            usuarioService.desactivar(id);
+            return new ResponseEntity<>("Usuario desactivado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 }

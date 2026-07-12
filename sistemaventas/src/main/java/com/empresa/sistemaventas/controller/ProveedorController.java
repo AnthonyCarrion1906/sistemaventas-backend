@@ -46,4 +46,14 @@ public class ProveedorController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> desactivarProveedor(@PathVariable Integer id) {
+        try {
+            proveedorService.desactivar(id);
+            return new ResponseEntity<>("Proveedor desactivado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 }

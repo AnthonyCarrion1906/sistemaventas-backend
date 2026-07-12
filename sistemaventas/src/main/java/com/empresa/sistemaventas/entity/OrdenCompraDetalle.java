@@ -1,5 +1,6 @@
 package com.empresa.sistemaventas.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore; // Importación necesaria
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class OrdenCompraDetalle {
 
     @ManyToOne
     @JoinColumn(name = "orden_compra_id", nullable = false)
+    @JsonIgnore // <--- ESTO ROMPE EL BUCLE INFINITO EN POSTMAN
     private OrdenCompra ordenCompra;
 
     @ManyToOne

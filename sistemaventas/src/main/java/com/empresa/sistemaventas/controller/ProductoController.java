@@ -47,4 +47,14 @@ public class ProductoController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> desactivarProducto(@PathVariable Integer id) {
+        try {
+            productoService.desactivar(id);
+            return new ResponseEntity<>("Producto desactivado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
 }

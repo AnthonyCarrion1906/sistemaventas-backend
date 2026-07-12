@@ -15,25 +15,37 @@ public class ProveedorService {
     private ProveedorRepository proveedorRepository;
 
     public List<Proveedor> obtenerTodos() {
-        return proveedorRepository.findAll();
+        // Filtramos para devolver únicamente los proveedores activos
+        return proveedorRepository.findAll().stream()
+                .filter(proveedor -> Boolean.TRUE.equals(proveedor.getEstado()))
+                .toList();
     }
 
     public Optional<Proveedor> obtenerPorId(Integer id) {
+        // Mantenemos la búsqueda por ID intacta para el historial de compras antiguas
         return proveedorRepository.findById(id);
     }
 
     public List<Proveedor> buscar(String termino) {
         if (termino == null || termino.isBlank()) {
-            return proveedorRepository.findAll();
+            return obtenerTodos(); // Reutilizamos la validación de activos
         }
-        // ATENCIÓN AQUÍ: Se cambió el nombre del método de NombreRazonSocial a RazonSocial
-        return proveedorRepository.findByRazonSocialContainingIgnoreCaseOrRucContainingIgnoreCase(termino, termino);
+        // Filtramos los resultados de la búsqueda para ocultar los inactivos
+        return proveedorRepository.findByRazonSocialContainingIgnoreCaseOrRucContainingIgnoreCase(termino, termino).stream()
+                .filter(proveedor -> Boolean.TRUE.equals(proveedor.getEstado()))
+                .toList();
     }
 
     public Proveedor guardar(Proveedor proveedor) {
         if (proveedor.getRuc() != null && proveedorRepository.existsByRuc(proveedor.getRuc()) && proveedor.getId() == null) {
             throw new RuntimeException("El RUC ya está registrado para otro proveedor");
         }
+        
+        // Garantizamos que todo proveedor nuevo nazca activo por defecto
+        if (proveedor.getEstado() == null) {
+            proveedor.setEstado(true);
+        }
+        
         return proveedorRepository.save(proveedor);
     }
 
@@ -52,8 +64,19 @@ public class ProveedorService {
         // Se actualizó a categoriasSuministro (como texto simple)
         existente.setCategoriasSuministro(datos.getCategoriasSuministro());
         
-        // Se eliminó la línea de setActivo(...)
+        // Actualizamos el estado si es que se envía uno nuevo
+        existente.setEstado(datos.getEstado() != null ? datos.getEstado() : existente.getEstado());
         
         return proveedorRepository.save(existente);
+    }
+
+    // NUEVO MÉTODO: Desactivación Lógica (Soft Delete)
+    public void desactivar(Integer id) {
+        Proveedor existente = proveedorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+                
+        // Cambiamos el estado a false para desactivarlo de las vistas
+        existente.setEstado(false); 
+        proveedorRepository.save(existente);
     }
 }
