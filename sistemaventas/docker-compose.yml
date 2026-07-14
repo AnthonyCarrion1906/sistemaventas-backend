@@ -1,0 +1,22 @@
+services:
+  sistemaventas-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sistemaventas-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      # Datasource
+      DB_URL: jdbc:mariadb://2.24.221.91:3306/mydatabase
+      DB_USERNAME: myuser
+      DB_PASSWORD: secret
+    env_file:
+      - .env
+    networks:
+      - hd-selva-dev
+
+networks:
+  hd-selva-dev:
+    external: true
