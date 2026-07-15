@@ -1,5 +1,6 @@
 package com.empresa.sistemaventas.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,6 +18,7 @@ public class EgresoCaja {
 
     @ManyToOne
     @JoinColumn(name = "caja_diaria_id", nullable = false)
+    @JsonIgnore
     private CajaDiaria cajaDiaria;
 
     @Column(nullable = false)

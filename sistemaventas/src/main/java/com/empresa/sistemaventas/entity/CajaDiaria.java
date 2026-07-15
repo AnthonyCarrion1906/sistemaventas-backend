@@ -1,5 +1,6 @@
 package com.empresa.sistemaventas.entity;
 
+import com.empresa.sistemaventas.constant.EstadoCaja;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -36,7 +37,7 @@ public class CajaDiaria {
     // Asumiendo que 'estado' es un VARCHAR (ej. ABIERTA / CERRADA)
     // Si en tu BD es un TINYINT, cambia String a Boolean
     @Column(length = 20)
-    private String estado = "ABIERTA"; 
+    private String estado = EstadoCaja.ABIERTA;
 
     @Column(name = "fecha_apertura")
     private LocalDateTime fechaApertura;
