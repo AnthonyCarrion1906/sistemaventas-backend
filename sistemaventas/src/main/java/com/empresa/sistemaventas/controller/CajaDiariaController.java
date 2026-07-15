@@ -35,7 +35,6 @@ public class CajaDiariaController {
             LocalDate fecha = LocalDate.parse(payload.get("fecha"));
             BigDecimal montoInicial = new BigDecimal(payload.get("montoInicial"));
 
-            // Extraer el token sin el prefijo "Bearer "
             if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
                 return new ResponseEntity<>("Token de autorización inválido o ausente", HttpStatus.UNAUTHORIZED);
             }

@@ -27,11 +27,17 @@ public class OrdenCompraDetalle {
     @Column(name = "cantidad", nullable = false)
     private BigDecimal cantidad = BigDecimal.ONE;
 
+    @Column(name = "cantidad_solicitada", nullable = false)
+    private BigDecimal cantidadSolicitada = BigDecimal.ZERO;
+
     @Column(name = "precio_unitario", nullable = false)
     private BigDecimal precioUnitario = BigDecimal.ZERO;
 
     @Column(name = "cantidad_recibida", nullable = false)
     private BigDecimal cantidadRecibida = BigDecimal.ZERO;
+
+    @Column(name = "estado", nullable = false)
+    private String estado = "PENDIENTE";
 
     @Column(name = "subtotal", nullable = false)
     private BigDecimal subtotal = BigDecimal.ZERO;

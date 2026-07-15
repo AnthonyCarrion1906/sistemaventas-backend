@@ -38,9 +38,23 @@ public class OrdenCompraController {
         return new ResponseEntity<>(ordenCompraService.obtenerPorProveedor(proveedorId), HttpStatus.OK);
     }
 
+    @Autowired
+    private com.empresa.sistemaventas.security.JwtUtil jwtUtil;
+
     @PostMapping
-    public ResponseEntity<?> crearOrden(@RequestBody OrdenCompra ordenCompra) {
+    public ResponseEntity<?> crearOrden(
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestBody OrdenCompra ordenCompra) {
         try {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return new ResponseEntity<>("Token de autorización inválido o ausente", HttpStatus.UNAUTHORIZED);
+            }
+            String token = tokenHeader.substring(7);
+            Long userId = jwtUtil.extractUserId(token);
+            if (userId == null) {
+                return new ResponseEntity<>("No se pudo extraer el ID de usuario del token", HttpStatus.UNAUTHORIZED);
+            }
+            ordenCompra.setUsuarioId(userId.intValue());
             return new ResponseEntity<>(ordenCompraService.guardar(ordenCompra), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
