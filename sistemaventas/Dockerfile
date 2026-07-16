@@ -1,5 +1,5 @@
-# 1. Definimos la imagen base con Java 21
-FROM eclipse-temurin:21-jdk-jammy AS build
+# 1. Definimos la imagen base con Java 25
+FROM eclipse-temurin:25-jdk-jammy AS build
 
 # 2. Instalamos Maven
 RUN apt-get update && apt-get install -y maven
@@ -18,7 +18,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # 7. Creamos la imagen final más ligera (solo con Java instalado)
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 WORKDIR /app
 
 # 8. Copiamos solo el archivo .jar generado en la etapa anterior
