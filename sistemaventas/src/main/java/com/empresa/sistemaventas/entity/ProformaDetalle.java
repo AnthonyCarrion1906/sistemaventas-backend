@@ -1,5 +1,6 @@
 package com.empresa.sistemaventas.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class ProformaDetalle {
 
     @ManyToOne
     @JoinColumn(name = "proforma_id", nullable = false)
+    @JsonIgnore
     private Proforma proforma;
 
     @Column(name = "tipo_item", nullable = false)

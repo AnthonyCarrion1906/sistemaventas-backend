@@ -33,9 +33,23 @@ public class ProformaController {
         return new ResponseEntity<>(proformaService.obtenerPorCliente(clienteId), HttpStatus.OK);
     }
 
+    @Autowired
+    private com.empresa.sistemaventas.security.JwtUtil jwtUtil;
+
     @PostMapping
-    public ResponseEntity<?> crearProforma(@RequestBody Proforma proforma) {
+    public ResponseEntity<?> crearProforma(
+            @RequestHeader("Authorization") String tokenHeader,
+            @RequestBody Proforma proforma) {
         try {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+                return new ResponseEntity<>("Token de autorización inválido o ausente", HttpStatus.UNAUTHORIZED);
+            }
+            String token = tokenHeader.substring(7);
+            Long userId = jwtUtil.extractUserId(token);
+            if (userId == null) {
+                return new ResponseEntity<>("No se pudo extraer el ID de usuario del token", HttpStatus.UNAUTHORIZED);
+            }
+            proforma.setUsuarioId(userId.intValue());
             return new ResponseEntity<>(proformaService.guardar(proforma), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
