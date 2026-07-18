@@ -9,6 +9,8 @@ import java.util.List;
 
 @Repository
 public interface ProductoRepository extends JpaRepository<Producto, Integer> {
-    List<Producto> findByNombreContainingIgnoreCase(String nombre);
+    List<Producto> findByNombreContainingIgnoreCaseOrCodigoContainingIgnoreCase(String nombre, String codigo);
     List<Producto> findByStockActualLessThanEqual(BigDecimal stockMinimo);
+    java.util.Optional<Producto> findByCodigo(String codigo);
 }
+

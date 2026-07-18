@@ -18,6 +18,9 @@ public class Producto {
     @Column(name = "subcategoria_id")
     private Integer subcategoriaId; 
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String codigo;
+
     @Column(nullable = false, length = 150)
     private String nombre;
 

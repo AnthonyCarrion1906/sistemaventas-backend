@@ -32,16 +32,24 @@ public class ProductoService {
             return obtenerTodos(); // Reutilizamos la validación de activos
         }
         // Filtramos los resultados de la búsqueda para ocultar los desactivados
-        return productoRepository.findByNombreContainingIgnoreCase(termino).stream()
+        return productoRepository.findByNombreContainingIgnoreCaseOrCodigoContainingIgnoreCase(termino, termino).stream()
                 .filter(producto -> Boolean.TRUE.equals(producto.getEstado()))
                 .toList();
     }
 
     public Producto guardar(Producto producto) {
+        // Validamos que el código no esté duplicado
+        if (producto.getCodigo() == null || producto.getCodigo().isBlank()) {
+            throw new RuntimeException("El código del producto es obligatorio");
+        }
+        if (productoRepository.findByCodigo(producto.getCodigo().trim()).isPresent()) {
+            throw new RuntimeException("Ya existe un producto registrado con el código: " + producto.getCodigo());
+        }
         // Garantizamos que todo producto nuevo nazca activo por defecto
         if (producto.getEstado() == null) {
             producto.setEstado(true);
         }
+        producto.setCodigo(producto.getCodigo().trim());
         return productoRepository.save(producto);
     }
 
@@ -49,6 +57,18 @@ public class ProductoService {
         Producto existente = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         
+        if (datos.getCodigo() == null || datos.getCodigo().isBlank()) {
+            throw new RuntimeException("El código del producto es obligatorio");
+        }
+
+        // Si se cambia el código, validar que no colisione con otro producto
+        if (!existente.getCodigo().equalsIgnoreCase(datos.getCodigo().trim())) {
+            if (productoRepository.findByCodigo(datos.getCodigo().trim()).isPresent()) {
+                throw new RuntimeException("Ya existe otro producto registrado con el código: " + datos.getCodigo());
+            }
+            existente.setCodigo(datos.getCodigo().trim());
+        }
+
         // Se actualizan solo los campos que existen en la BD
         existente.setNombre(datos.getNombre());
         existente.setSubcategoriaId(datos.getSubcategoriaId()); 
@@ -62,6 +82,7 @@ public class ProductoService {
         
         return productoRepository.save(existente);
     }
+
 
     // NUEVO MÉTODO: Desactivación Lógica (Soft Delete)
     public void desactivar(Integer id) {
