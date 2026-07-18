@@ -1,7 +1,5 @@
 package com.empresa.sistemaventas.controller;
 
-import com.empresa.sistemaventas.entity.CajaDiaria;
-import com.empresa.sistemaventas.entity.EgresoCaja;
 import com.empresa.sistemaventas.service.CajaDiariaService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -56,9 +54,8 @@ public class CajaDiariaController {
     @PatchMapping("/{id}/cerrar")
     public ResponseEntity<?> cerrarCaja(@PathVariable Integer id, @RequestBody Map<String, String> payload) {
         try {
-            BigDecimal montoFisicoReal = new BigDecimal(payload.get("montoFisicoReal"));
-            BigDecimal saldoEsperado = new BigDecimal(payload.get("saldoEsperado"));
-            return new ResponseEntity<>(cajaDiariaService.cerrarCaja(id, montoFisicoReal, saldoEsperado),
+            BigDecimal montoCierreReal = new BigDecimal(payload.get("montoCierreReal"));
+            return new ResponseEntity<>(cajaDiariaService.cerrarCaja(id, montoCierreReal),
                     HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

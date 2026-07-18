@@ -34,6 +34,9 @@ public class CajaDiaria {
     @Column(name = "monto_fisico_real")
     private BigDecimal montoFisicoReal = BigDecimal.ZERO;
 
+    @Column(name = "monto_cierre_real")
+    private BigDecimal montoCierreReal = BigDecimal.ZERO;
+
     // Asumiendo que 'estado' es un VARCHAR (ej. ABIERTA / CERRADA)
     // Si en tu BD es un TINYINT, cambia String a Boolean
     @Column(length = 20)

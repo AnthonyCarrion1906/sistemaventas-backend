@@ -1,5 +1,6 @@
 package com.empresa.sistemaventas.service;
 
+import com.empresa.sistemaventas.constant.MetodoPago;
 import com.empresa.sistemaventas.entity.*;
 import com.empresa.sistemaventas.repository.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional; // <-- Agregamos esta importación
+import java.util.Optional;
 
 @Service
 public class VentaService {
@@ -18,6 +19,9 @@ public class VentaService {
 
     @Autowired
     private ProformaService proformaService;
+
+    @Autowired
+    private CajaDiariaService cajaDiariaService;
 
     public List<Venta> obtenerTodas() {
         return ventaRepository.findAll();
@@ -30,29 +34,32 @@ public class VentaService {
     // ------------------------------------------------------------
 
     @Transactional
-    // OJO: Le quité el parámetro String comprobante porque ya no existe en la BD
     public Venta convertirProformaEnVenta(Integer proformaId, String metodoPago) {
         Proforma proforma = proformaService.obtenerPorId(proformaId)
                 .orElseThrow(() -> new RuntimeException("Proforma no encontrada"));
-                
+
         if (Boolean.TRUE.equals(proforma.getEsFinal())) {
             throw new RuntimeException("La proforma ya fue convertida en venta");
         }
-        
+
+        // Toda venta requiere caja abierta para trazabilidad completa de ingresos
+        CajaDiaria cajaActiva = cajaDiariaService.obtenerCajaAbiertaHoy()
+                .orElseThrow(() -> new RuntimeException(
+                        "No hay una caja diaria abierta para hoy. "
+                        + "Debe abrir la caja antes de registrar cualquier venta."
+                ));
+
         Venta venta = new Venta();
         venta.setProforma(proforma);
         venta.setFecha(proforma.getFecha());
         venta.setMetodoPago(metodoPago);
-        
-        // Asignamos el id del usuario que hizo la proforma (si aplica) o puedes pasarlo como parámetro luego
-        venta.setUsuarioId(proforma.getUsuarioId()); 
-        
-        // Corregido: de setTotalVenta a setTotal
+
+        // Asignamos el id del usuario que hizo la proforma
+        venta.setUsuarioId(proforma.getUsuarioId());
+
         venta.setTotal(proforma.getTotal());
-        
-        // La utilidad la podemos inicializar en cero por ahora si no tienes la fórmula aún
         venta.setUtilidad(BigDecimal.ZERO);
-        
+
         proforma.getDetalles().forEach(detalle -> {
             VentaDetalle ventaDetalle = new VentaDetalle();
             ventaDetalle.setVenta(venta);
@@ -64,11 +71,22 @@ public class VentaService {
             ventaDetalle.setSubtotal(detalle.getSubtotal());
             venta.getDetalles().add(ventaDetalle);
         });
-        
+
         proforma.setEstado("CERRADA");
         proforma.setEsFinal(true);
-        
-        return ventaRepository.save(venta);
+
+        Venta guardada = ventaRepository.save(venta);
+
+        // Acumular ingreso en la caja:
+        //   - total_esperado: siempre (todos los métodos de pago)
+        //   - monto_fisico_real: solo EFECTIVO (dinero físico que entra a la caja)
+        cajaDiariaService.registrarIngreso(
+                cajaActiva.getId(),
+                proforma.getTotal(),
+                MetodoPago.afectaEfectivoFisico(metodoPago)
+        );
+
+        return guardada;
     }
-    
+
 }

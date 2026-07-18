@@ -41,7 +41,7 @@ public class CajaDiariaService {
     }
 
     @Transactional
-    public CajaDiaria cerrarCaja(Integer id, BigDecimal montoFisicoReal, BigDecimal saldoEsperado) {
+    public CajaDiaria cerrarCaja(Integer id, BigDecimal montoCierreReal) {
         CajaDiaria caja = cajaDiariaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
 
@@ -49,10 +49,18 @@ public class CajaDiariaService {
             throw new RuntimeException("La caja ya está cerrada");
         }
 
-        caja.setMontoFisicoReal(montoFisicoReal);
-        caja.setTotalEsperado(saldoEsperado);
+        // montoCierreReal: lo que el cajero cuenta físicamente al cierre.
+        // montoFisicoReal: calculado por el sistema (montoInicial + ventasEfectivo - egresos).
+        caja.setMontoCierreReal(montoCierreReal);
         caja.setEstado(EstadoCaja.CERRADA);
-        caja.setFechaCierre(LocalDateTime.now()); // Registra la hora exacta de cierre
+        caja.setFechaCierre(LocalDateTime.now());
+
+        log.info("Caja ID {} cerrada. totalEsperado (todas las ventas): {}, montoFisicoReal (efectivo sistema): {}, montoCierreReal (arqueo manual): {}, descuadre: {}",
+                id,
+                caja.getTotalEsperado(),
+                caja.getMontoFisicoReal(),
+                montoCierreReal,
+                montoCierreReal.subtract(caja.getMontoFisicoReal() != null ? caja.getMontoFisicoReal() : BigDecimal.ZERO));
 
         return cajaDiariaRepository.save(caja);
     }
@@ -67,16 +75,15 @@ public class CajaDiariaService {
             throw new RuntimeException("No se pueden registrar egresos en una caja cerrada");
         }
 
-        BigDecimal efectivoDisponible = caja.getMontoInicial();
-        for (EgresoCaja egreso : caja.getEgresos()) {
-            efectivoDisponible = efectivoDisponible.subtract(egreso.getMonto());
-        }
+        // El efectivo disponible actual en caja se rige por montoFisicoReal (efectivo teórico del sistema)
+        BigDecimal efectivoDisponible = caja.getMontoFisicoReal() != null ? caja.getMontoFisicoReal() : BigDecimal.ZERO;
 
         if (monto.compareTo(efectivoDisponible) > 0) {
-            throw new RuntimeException("El monto del egreso supera el efectivo disponible (Monto: " + monto
-                    + ", Disponible: " + efectivoDisponible + ")");
+            throw new RuntimeException("El monto del egreso supera el efectivo disponible en caja (Monto solicitado: " + monto
+                    + ", Disponible actual: " + efectivoDisponible + ")");
         }
 
+        // Creamos y asociamos el egreso
         EgresoCaja egresoCaja = new EgresoCaja();
         egresoCaja.setCajaDiaria(caja);
         egresoCaja.setMonto(monto);
@@ -84,11 +91,63 @@ public class CajaDiariaService {
         egresoCaja.setCategoria(categoria);
         egresoCaja.setTicketCorrelativo(numeroCorrelativo);
         caja.getEgresos().add(egresoCaja);
+
+        // Descontamos del efectivo del sistema (montoFisicoReal)
+        caja.setMontoFisicoReal(efectivoDisponible.subtract(monto));
+
+        // Descontamos del saldo esperado total (totalEsperado)
+        BigDecimal esperadoActual = caja.getTotalEsperado() != null ? caja.getTotalEsperado() : BigDecimal.ZERO;
+        caja.setTotalEsperado(esperadoActual.subtract(monto));
+
         cajaDiariaRepository.save(caja);
+        log.info("Egreso de {} registrado en caja ID {}. Nuevo montoFisicoReal: {}, Nuevo totalEsperado: {}",
+                monto, cajaId, caja.getMontoFisicoReal(), caja.getTotalEsperado());
+
         return egresoCaja;
     }
 
     public Optional<CajaDiaria> obtenerPorId(Integer id) {
         return cajaDiariaRepository.findById(id);
     }
-}
+
+    /**
+     * Retorna la caja diaria que esté ABIERTA para el día de hoy, si existe.
+     * Utilizado por VentaService para validar antes de registrar cualquier venta.
+     */
+    public Optional<CajaDiaria> obtenerCajaAbiertaHoy() {
+        return cajaDiariaRepository.findByFechaAndEstado(LocalDate.now(), EstadoCaja.ABIERTA);
+    }
+
+    /**
+     * Acumula un ingreso por venta en la caja:
+     * - Siempre suma al {@code totalEsperado} (todos los métodos de pago).
+     * - Solo suma al {@code montoFisicoReal} cuando {@code afectaFisico} es true (solo EFECTIVO).
+     *
+     * @param cajaId       ID de la caja a actualizar
+     * @param monto        monto de la venta a registrar
+     * @param afectaFisico true si el pago es en EFECTIVO (dinero físico que entra a la caja)
+     */
+    @Transactional
+    public void registrarIngreso(Integer cajaId, BigDecimal monto, boolean afectaFisico) {
+        CajaDiaria caja = cajaDiariaRepository.findById(cajaId)
+                .orElseThrow(() -> new RuntimeException("Caja no encontrada"));
+
+        if (EstadoCaja.CERRADA.equals(caja.getEstado())) {
+            throw new RuntimeException("No se pueden registrar ingresos en una caja cerrada");
+        }
+
+        // Acumula en total_esperado para todos los métodos de pago
+        BigDecimal esperadoActual = caja.getTotalEsperado() != null ? caja.getTotalEsperado() : BigDecimal.ZERO;
+        caja.setTotalEsperado(esperadoActual.add(monto));
+
+        // Acumula en monto_fisico_real solo para EFECTIVO
+        if (afectaFisico) {
+            BigDecimal fisicoActual = caja.getMontoFisicoReal() != null ? caja.getMontoFisicoReal() : BigDecimal.ZERO;
+            caja.setMontoFisicoReal(fisicoActual.add(monto));
+        }
+
+        cajaDiariaRepository.save(caja);
+        log.info("Ingreso de {} registrado en caja ID {} [afectaFisico={}]. totalEsperado={}, montoFisicoReal={}",
+                monto, cajaId, afectaFisico, caja.getTotalEsperado(), caja.getMontoFisicoReal());
+    }
+}
