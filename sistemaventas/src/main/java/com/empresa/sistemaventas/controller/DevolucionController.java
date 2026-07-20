@@ -33,6 +33,7 @@ public class DevolucionController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
     @GetMapping
     public ResponseEntity<List<Devolucion>> listarTodas() {
         return new ResponseEntity<>(devolucionService.obtenerTodas(), HttpStatus.OK);
