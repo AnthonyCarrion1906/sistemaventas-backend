@@ -42,7 +42,8 @@ public class ProductoService {
         if (producto.getCodigo() == null || producto.getCodigo().isBlank()) {
             throw new RuntimeException("El código del producto es obligatorio");
         }
-        if (productoRepository.findByCodigo(producto.getCodigo().trim()).isPresent()) {
+        Optional<Producto> existente = productoRepository.findByCodigo(producto.getCodigo().trim());
+        if (existente.isPresent() && (producto.getId() == null || !existente.get().getId().equals(producto.getId()))) {
             throw new RuntimeException("Ya existe un producto registrado con el código: " + producto.getCodigo());
         }
         // Garantizamos que todo producto nuevo nazca activo por defecto
