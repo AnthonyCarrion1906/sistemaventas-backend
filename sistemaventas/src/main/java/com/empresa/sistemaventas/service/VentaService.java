@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -22,6 +24,12 @@ public class VentaService {
 
     @Autowired
     private CajaDiariaService cajaDiariaService;
+
+    @Autowired
+    private ProductoService productoService;
+
+    @Autowired
+    private KardexService kardexService;
 
     public List<Venta> obtenerTodas() {
         return ventaRepository.findAll();
@@ -45,9 +53,38 @@ public class VentaService {
         // Toda venta requiere caja abierta para trazabilidad completa de ingresos
         CajaDiaria cajaActiva = cajaDiariaService.obtenerCajaAbiertaHoy()
                 .orElseThrow(() -> new RuntimeException(
-                        "No hay una caja diaria abierta para hoy. "
+                        "No hay una caja diaria abierta. "
                         + "Debe abrir la caja antes de registrar cualquier venta."
                 ));
+
+        // 1. Validar stock acumulado de todos los productos en la proforma
+        Map<Integer, BigDecimal> cantidadesPorProducto = new HashMap<>();
+        if (proforma.getDetalles() != null) {
+            for (ProformaDetalle detalle : proforma.getDetalles()) {
+                if (detalle.getProductoId() != null) {
+                    cantidadesPorProducto.merge(
+                            detalle.getProductoId(), 
+                            detalle.getCantidad() != null ? detalle.getCantidad() : BigDecimal.ZERO, 
+                            BigDecimal::add
+                    );
+                }
+            }
+        }
+
+        for (Map.Entry<Integer, BigDecimal> entry : cantidadesPorProducto.entrySet()) {
+            Integer productoId = entry.getKey();
+            BigDecimal cantidadRequerida = entry.getValue();
+
+            Producto producto = productoService.obtenerPorId(productoId)
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado (ID: " + productoId + ")"));
+
+            BigDecimal stockActual = producto.getStockActual() != null ? producto.getStockActual() : BigDecimal.ZERO;
+
+            if (stockActual.compareTo(cantidadRequerida) < 0) {
+                throw new RuntimeException("Stock insuficiente para el producto '" + producto.getNombre() 
+                        + "'. Stock disponible: " + stockActual + ", Solicitado: " + cantidadRequerida);
+            }
+        }
 
         Venta venta = new Venta();
         venta.setProforma(proforma);
@@ -60,17 +97,37 @@ public class VentaService {
         venta.setTotal(proforma.getTotal());
         venta.setUtilidad(BigDecimal.ZERO);
 
-        proforma.getDetalles().forEach(detalle -> {
-            VentaDetalle ventaDetalle = new VentaDetalle();
-            ventaDetalle.setVenta(venta);
-            ventaDetalle.setProductoId(detalle.getProductoId());
-            ventaDetalle.setServicioId(detalle.getServicioId());
-            ventaDetalle.setDescripcion(detalle.getDescripcion());
-            ventaDetalle.setCantidad(detalle.getCantidad());
-            ventaDetalle.setPrecioUnitario(detalle.getPrecioUnitario());
-            ventaDetalle.setSubtotal(detalle.getSubtotal());
-            venta.getDetalles().add(ventaDetalle);
-        });
+        // 2. Crear detalles de venta, registrar Kardex y descontar stock
+        if (proforma.getDetalles() != null) {
+            for (ProformaDetalle detalle : proforma.getDetalles()) {
+                VentaDetalle ventaDetalle = new VentaDetalle();
+                ventaDetalle.setVenta(venta);
+                ventaDetalle.setProductoId(detalle.getProductoId());
+                ventaDetalle.setServicioId(detalle.getServicioId());
+                ventaDetalle.setDescripcion(detalle.getDescripcion());
+                ventaDetalle.setCantidad(detalle.getCantidad());
+                ventaDetalle.setPrecioUnitario(detalle.getPrecioUnitario());
+                ventaDetalle.setSubtotal(detalle.getSubtotal());
+                venta.getDetalles().add(ventaDetalle);
+
+                if (detalle.getProductoId() != null) {
+                    Producto producto = productoService.obtenerPorId(detalle.getProductoId()).get();
+
+                    // Registrar movimiento de SALIDA en Kardex
+                    kardexService.registrarMovimiento(
+                            producto,
+                            detalle.getCantidad(),
+                            "SALIDA",
+                            "Venta de Proforma #" + proforma.getId()
+                    );
+
+                    // Descontar del stock actual
+                    BigDecimal nuevoStock = producto.getStockActual().subtract(detalle.getCantidad());
+                    producto.setStockActual(nuevoStock);
+                    productoService.guardar(producto);
+                }
+            }
+        }
 
         proforma.setEstado("CERRADA");
         proforma.setEsFinal(true);
