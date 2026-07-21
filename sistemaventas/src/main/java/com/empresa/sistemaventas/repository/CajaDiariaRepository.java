@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface CajaDiariaRepository extends JpaRepository<CajaDiaria, Integer> {
     Optional<CajaDiaria> findByFecha(LocalDate fecha);
     Optional<CajaDiaria> findByFechaAndEstado(LocalDate fecha, String estado);
+    Optional<CajaDiaria> findFirstByEstadoOrderByFechaDesc(String estado);
 }

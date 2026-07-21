@@ -111,11 +111,11 @@ public class CajaDiariaService {
     }
 
     /**
-     * Retorna la caja diaria que esté ABIERTA para el día de hoy, si existe.
-     * Utilizado por VentaService para validar antes de registrar cualquier venta.
+     * Retorna la caja diaria activa/ABIERTA más reciente.
+     * Utilizado por VentaService y DevolucionService para validar antes de registrar transacciones.
      */
     public Optional<CajaDiaria> obtenerCajaAbiertaHoy() {
-        return cajaDiariaRepository.findByFechaAndEstado(LocalDate.now(), EstadoCaja.ABIERTA);
+        return cajaDiariaRepository.findFirstByEstadoOrderByFechaDesc(EstadoCaja.ABIERTA);
     }
 
     /**
