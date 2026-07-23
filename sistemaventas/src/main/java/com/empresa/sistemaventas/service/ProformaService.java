@@ -25,6 +25,9 @@ public class ProformaService {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired
+    private CorrelativoService correlativoService;
+
     public List<Proforma> obtenerTodas() {
         return proformaRepository.findAll();
     }
@@ -41,18 +44,20 @@ public class ProformaService {
     public Proforma guardar(Proforma proforma) {
         Cliente cliente = clienteService.obtenerPorId(proforma.getCliente().getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no válido"));
-        
+
         proforma.setCliente(cliente);
-        
-        // CORREGIDO: Uso de String en lugar de Enum
+
+        // El codigo_correlativo es generado internamente por el sistema, nunca por el
+        // cliente
+        proforma.setCodigoCorrelativo(correlativoService.generarCodigo("PROFORMA"));
+
         proforma.setEstado(proforma.getEstado() == null ? "PENDIENTE" : proforma.getEstado());
-        
+
         if (proforma.getDetalles() != null) {
             proforma.getDetalles().forEach(detalle -> {
                 detalle.setProforma(proforma);
                 detalle.setSubtotal(detalle.getPrecioUnitario().multiply(detalle.getCantidad()));
-                
-                // CORREGIDO: Validamos con equals() y usamos getTipoItem() en lugar de getTipo()
+
                 if ("SERVICIO".equals(detalle.getTipoItem()) && detalle.getServicioId() != null) {
                     servicioService.obtenerPorId(detalle.getServicioId())
                             .orElseThrow(() -> new RuntimeException("Servicio inválido en detalle"));
@@ -63,7 +68,7 @@ public class ProformaService {
                 }
             });
         }
-        
+
         calcularTotales(proforma);
         return proformaRepository.save(proforma);
     }
@@ -72,35 +77,35 @@ public class ProformaService {
         BigDecimal sumaSubtotales = proforma.getDetalles().stream()
                 .map(ProformaDetalle::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
-        proforma.setSubtotal(sumaSubtotales); 
+
+        proforma.setSubtotal(sumaSubtotales);
 
         BigDecimal descuento = proforma.getDescuento() != null ? proforma.getDescuento() : BigDecimal.ZERO;
-        
+
         if (descuento.compareTo(sumaSubtotales) > 0) {
             descuento = sumaSubtotales;
         }
-        
+
         proforma.setDescuento(descuento);
-        proforma.setTotal(sumaSubtotales.subtract(descuento)); 
+        proforma.setTotal(sumaSubtotales.subtract(descuento));
     }
 
     @Transactional
     public Proforma actualizar(Integer id, Proforma datos) {
         Proforma existente = proformaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proforma no encontrada"));
-                
+
         if (Boolean.TRUE.equals(existente.getEsFinal())) {
             throw new RuntimeException("No se puede modificar una proforma finalizada");
         }
-        
+
         existente.setCliente(clienteService.obtenerPorId(datos.getCliente().getId())
                 .orElseThrow(() -> new RuntimeException("Cliente no válido")));
         existente.setEstado(datos.getEstado() != null ? datos.getEstado() : existente.getEstado());
-        
+
         existente.setDescuento(datos.getDescuento());
-        if (datos.getUsuarioId() != null) existente.setUsuarioId(datos.getUsuarioId());
-        if (datos.getCodigoCorrelativo() != null) existente.setCodigoCorrelativo(datos.getCodigoCorrelativo());
+        if (datos.getUsuarioId() != null)
+            existente.setUsuarioId(datos.getUsuarioId());
 
         existente.getDetalles().clear();
         if (datos.getDetalles() != null) {
@@ -110,7 +115,7 @@ public class ProformaService {
                 existente.getDetalles().add(detalle);
             });
         }
-        
+
         calcularTotales(existente);
         return proformaRepository.save(existente);
     }
@@ -120,11 +125,11 @@ public class ProformaService {
     public Proforma cambiarEstado(Integer id, String estado) {
         Proforma existente = proformaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proforma no encontrada"));
-                
+
         existente.setEstado(estado);
         // CORREGIDO: Comparación de String
         if ("CERRADA".equals(estado)) {
-            existente.setEsFinal(true); 
+            existente.setEsFinal(true);
         }
         return proformaRepository.save(existente);
     }
@@ -133,16 +138,16 @@ public class ProformaService {
     public Proforma crearVersion(Integer id) {
         Proforma original = proformaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proforma original no encontrada"));
-                
+
         Proforma version = new Proforma();
         version.setCliente(original.getCliente());
-        
+
         // CORREGIDO: Uso de String
         version.setEstado("PENDIENTE");
         version.setUsuarioId(original.getUsuarioId());
         version.setCodigoCorrelativo(original.getCodigoCorrelativo());
         version.setVersion(original.getVersion() + 1);
-        
+
         original.getDetalles().forEach(detalle -> {
             ProformaDetalle copia = new ProformaDetalle();
             // CORREGIDO: Uso de getTipoItem() y setTipoItem()
@@ -156,9 +161,9 @@ public class ProformaService {
             copia.setProforma(version);
             version.getDetalles().add(copia);
         });
-        
+
         version.setDescuento(original.getDescuento());
-        
+
         calcularTotales(version);
         return proformaRepository.save(version);
     }
