@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.List;
 
@@ -18,12 +19,23 @@ public class VentaController {
     @Autowired
     private VentaService ventaService;
 
+    /**
+     * Convierte una proforma en venta.
+     * Body esperado:
+     * {
+     *   "metodoPago": "EFECTIVO",
+     *   "tipoCambio": 3.75        ← opcional; requerido solo si la proforma es en USD
+     * }
+     */
     @PostMapping("/convertir/{proformaId}")
     public ResponseEntity<?> convertirProforma(@PathVariable Integer proformaId,
             @RequestBody Map<String, String> payload) {
         try {
             String metodoPago = payload.get("metodoPago");
-            return new ResponseEntity<>(ventaService.convertirProformaEnVenta(proformaId, metodoPago),
+            BigDecimal tipoCambio = payload.containsKey("tipoCambio") && payload.get("tipoCambio") != null
+                    ? new BigDecimal(payload.get("tipoCambio"))
+                    : null;
+            return new ResponseEntity<>(ventaService.convertirProformaEnVenta(proformaId, metodoPago, tipoCambio),
                     HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

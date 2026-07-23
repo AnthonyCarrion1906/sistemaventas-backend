@@ -8,6 +8,7 @@ import java.util.List;
 
 @Repository
 public interface OrdenCompraRepository extends JpaRepository<OrdenCompra, Integer> {
+    List<OrdenCompra> findAllByOrderByIdDesc();
     List<OrdenCompra> findByProveedorId(Integer proveedorId);
     List<OrdenCompra> findByEstado(String estado);
 }

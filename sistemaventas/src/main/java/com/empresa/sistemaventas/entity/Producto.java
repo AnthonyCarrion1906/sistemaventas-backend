@@ -16,7 +16,7 @@ public class Producto {
 
     // Cambiado para coincidir con la base de datos
     @Column(name = "subcategoria_id")
-    private Integer subcategoriaId; 
+    private Integer subcategoriaId;
 
     @Column(nullable = false, unique = true, length = 50)
     private String codigo;
@@ -42,8 +42,9 @@ public class Producto {
     @Column(name = "costo_promedio")
     private BigDecimal costoPromedio = BigDecimal.ZERO;
 
-    // Renombrado a "estado" para coincidir con la BD. 
-    // Asumo que en MariaDB lo creaste como TINYINT(1) para booleanos.
+    @Column(name = "moneda_costo", nullable = false, length = 3)
+    private String monedaCosto = "PEN";
+
     @Column(name = "estado", nullable = false)
-    private Boolean estado = true; 
+    private Boolean estado = true;
 }

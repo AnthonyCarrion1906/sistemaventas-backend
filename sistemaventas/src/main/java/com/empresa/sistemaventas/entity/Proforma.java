@@ -55,6 +55,14 @@ public class Proforma {
     @Column(nullable = false)
     private LocalDate fecha = LocalDate.now();
 
+    // Moneda en que se emite la proforma: "PEN" o "USD"
+    @Column(name = "moneda", nullable = false, length = 3)
+    private String moneda = "PEN";
+
+    // Tipo de cambio PEN/USD congelado al momento de la proforma.
+    @Column(name = "tipo_cambio", precision = 10, scale = 4)
+    private BigDecimal tipoCambio;
+
     @OneToMany(mappedBy = "proforma", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProformaDetalle> detalles = new ArrayList<>();
 }

@@ -13,8 +13,8 @@ import java.util.List;
 @Repository
 public interface VentaRepository extends JpaRepository<Venta, Integer> {
 
-    // ── Total ventas (monto) en un rango de fechas ──────────────────
-    @Query("SELECT COALESCE(SUM(v.total), 0) FROM Venta v WHERE v.fecha BETWEEN :desde AND :hasta")
+    // ── Total ventas (monto en PEN) en un rango de fechas ────────────
+    @Query("SELECT COALESCE(SUM(COALESCE(v.totalPen, v.total)), 0) FROM Venta v WHERE v.fecha BETWEEN :desde AND :hasta")
     BigDecimal sumTotalEntreFechas(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 
     // ── Conteo de ventas en un rango de fechas ───────────────────────
@@ -23,19 +23,19 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
 
     // ── Total S/ agrupado por mes para el año actual ─────────────────
     // Devuelve List<Object[]> con [mes(int), total(BigDecimal)]
-    @Query("SELECT MONTH(v.fecha), COALESCE(SUM(v.total), 0) " +
+    @Query("SELECT MONTH(v.fecha), COALESCE(SUM(COALESCE(v.totalPen, v.total)), 0) " +
            "FROM Venta v WHERE YEAR(v.fecha) = :anio " +
            "GROUP BY MONTH(v.fecha) ORDER BY MONTH(v.fecha)")
     List<Object[]> sumTotalPorMesAnio(@Param("anio") int anio);
 
     // ── Total S/ por método de pago en un rango de fechas ───────────
-    @Query("SELECT v.metodoPago, COALESCE(SUM(v.total), 0) " +
+    @Query("SELECT v.metodoPago, COALESCE(SUM(COALESCE(v.totalPen, v.total)), 0) " +
            "FROM Venta v WHERE v.fecha BETWEEN :desde AND :hasta " +
            "GROUP BY v.metodoPago")
     List<Object[]> sumTotalPorMetodoPago(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);
 
     // ── Totales por día en un rango de fechas (para gráfico semanal) ─
-    @Query("SELECT v.fecha, COALESCE(SUM(v.total), 0), COUNT(v) " +
+    @Query("SELECT v.fecha, COALESCE(SUM(COALESCE(v.totalPen, v.total)), 0), COUNT(v) " +
            "FROM Venta v WHERE v.fecha BETWEEN :desde AND :hasta " +
            "GROUP BY v.fecha ORDER BY v.fecha")
     List<Object[]> sumTotalYConteoByFecha(@Param("desde") LocalDate desde, @Param("hasta") LocalDate hasta);

@@ -104,6 +104,10 @@ public class ProformaService {
         existente.setEstado(datos.getEstado() != null ? datos.getEstado() : existente.getEstado());
 
         existente.setDescuento(datos.getDescuento());
+        if (datos.getMoneda() != null && !datos.getMoneda().isBlank()) {
+            existente.setMoneda(datos.getMoneda());
+        }
+        existente.setTipoCambio(datos.getTipoCambio());
         if (datos.getUsuarioId() != null)
             existente.setUsuarioId(datos.getUsuarioId());
 
@@ -147,6 +151,10 @@ public class ProformaService {
         version.setUsuarioId(original.getUsuarioId());
         version.setCodigoCorrelativo(original.getCodigoCorrelativo());
         version.setVersion(original.getVersion() + 1);
+
+        // La nueva versión hereda la moneda y tipo de cambio de la proforma original
+        version.setMoneda(original.getMoneda() != null ? original.getMoneda() : "PEN");
+        version.setTipoCambio(original.getTipoCambio());
 
         original.getDetalles().forEach(detalle -> {
             ProformaDetalle copia = new ProformaDetalle();

@@ -33,4 +33,8 @@ public class ProductoProveedor {
     // Corregido: se mapeó explícitamente a es_principal
     @Column(name = "es_principal", nullable = false)
     private Boolean esPrincipal = false;
+
+    // Moneda del costo pactado: "PEN" o "USD"
+    @Column(name = "moneda", nullable = false, length = 3)
+    private String moneda = "PEN";
 }

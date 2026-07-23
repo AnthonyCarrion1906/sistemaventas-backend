@@ -35,11 +35,19 @@ public class Venta {
     @Column(name = "total")
     private BigDecimal total;
 
+    // Total en Soles (PEN) siempre guardado para reportes y dashboard
+    @Column(name = "total_pen")
+    private BigDecimal totalPen;
+
     // Agregado para coincidir con la BD
     @Column(name = "utilidad")
     private BigDecimal utilidad;
 
     // ELIMINADO: private String comprobante; (No existe en tu tabla)
+
+    // Tipo de cambio PEN/USD usado al convertir la proforma. NULL si la proforma fue en PEN.
+    @Column(name = "tipo_cambio", precision = 10, scale = 4)
+    private BigDecimal tipoCambio;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<VentaDetalle> detalles = new ArrayList<>();

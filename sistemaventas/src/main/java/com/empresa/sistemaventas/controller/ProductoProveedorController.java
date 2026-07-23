@@ -36,6 +36,26 @@ public class ProductoProveedorController {
     public ResponseEntity<ProductoProveedor> crearVinculo(@RequestBody ProductoProveedor registro) {
         return new ResponseEntity<>(service.guardar(registro), HttpStatus.CREATED);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> editarVinculo(@PathVariable Integer id, @RequestBody ProductoProveedor registro) {
+        try {
+            return new ResponseEntity<>(service.actualizar(id, registro), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarVinculo(@PathVariable Integer id) {
+        try {
+            service.eliminar(id);
+            return new ResponseEntity<>("Vínculo eliminado correctamente", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<ProductoProveedor>> listarTodos() {
         // Asumiendo que en tu service tienes un método obtenerTodos()
