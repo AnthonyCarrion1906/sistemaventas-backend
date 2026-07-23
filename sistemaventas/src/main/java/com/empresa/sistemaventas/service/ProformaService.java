@@ -29,7 +29,7 @@ public class ProformaService {
     private CorrelativoService correlativoService;
 
     public List<Proforma> obtenerTodas() {
-        return proformaRepository.findAll();
+        return proformaRepository.findAllByOrderByIdDesc();
     }
 
     public Optional<Proforma> obtenerPorId(Integer id) {

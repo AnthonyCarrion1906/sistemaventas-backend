@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ProformaRepository extends JpaRepository<Proforma, Integer> {
     List<Proforma> findByClienteId(Integer clienteId);
+    List<Proforma> findAllByOrderByIdDesc();
 }
